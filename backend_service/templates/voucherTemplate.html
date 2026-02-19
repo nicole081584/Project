@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <style>
+    body {
+      font-family: 'Helvetica', sans-serif;
+      padding: 40px;
+      background-image: url("{{backgroundUrl}}");
+      background-size: cover;
+      color: #ffffff;
+    }
+    .voucher {
+      background-color: transparent;
+      padding: 30px;
+      border-radius: 10px;
+    }
+    h1 {
+      font-size: 55px;
+      text-align: center;
+      color: #560324;
+      margin-bottom: 20px;
+      margin-top: 70px;
+    }
+    h2 {
+      font-size: 40px;
+      text-align: center;
+      color: #560324;
+      margin-bottom: 20px;
+    }
+    .qr {
+      text-align: center;
+      background-color: white;
+      margin: 20px;
+    }
+    .regular {
+      font-size: 30px;
+      text-align: center;
+      color: #560324; 
+      margin-bottom: 20px; 
+    }
+    .small {
+      text-align: center;
+      font-size: 20px;
+      color: #000000;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="voucher">
+    <h1>Gift Voucher</h1>
+    <h2><strong>Value:</strong> £{{value}}</h2>
+    <p class ="regular"><strong>QR Code</strong></p>
+    <div class="qr">
+      <img src="{{qrCodeUrl}}" width="256" height="256" />
+    </div>
+    <p class ="regular"><strong>Voucher Number:</strong> {{voucherNumber}}</p>
+    <p class ="regular"><strong>Date of issue:</strong> {{date}}</p>
+    <p class="small">Vouchers are valid for 6 months from the date of issue.<br>
+                    We accept no responsibility for lost or misplaced vouchers.<br>
+                    These cannot be replaced or redeemed.</p>
+  </div>
+</body>
+</html>

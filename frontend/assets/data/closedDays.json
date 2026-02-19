@@ -1,0 +1,8 @@
+{
+  "recurringClosedDays": ["Monday"],
+  "closedDates": ["2025-12-25"],
+  "onlineBookingUnavailable": ["2025-12-24","2025-12-31","2026-02-14","2026-03-15","2026-04-05","2026-06-21"],
+  "_comment": ["recurring Closed days are days that are closed every week.",
+                "closed Dates are days the Restaurant is fully closed like Christmas day.",
+                " Online Booking Unavailable are days where bookings need strictly controled hence no online bookings like Mothers Day." ]
+}
