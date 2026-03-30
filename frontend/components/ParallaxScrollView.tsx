@@ -15,13 +15,14 @@ export default function ParallaxScrollView({children}: Props) {
   const bottom = useBottomTabOverflow();
 
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={styles.container} accessible={false}>
       <Animated.ScrollView
         ref={scrollRef}
         scrollEventThrottle={16}
         scrollIndicatorInsets={{ bottom }}
-        contentContainerStyle={{ paddingBottom: bottom }}>
-        <ThemedView style={styles.content}>{children}</ThemedView>
+        contentContainerStyle={{ paddingBottom: bottom }}
+        accessible={false}>
+        <ThemedView accessible={false} style={styles.content}>{children}</ThemedView>
       </Animated.ScrollView>
     </ThemedView>
   );

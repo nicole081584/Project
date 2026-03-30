@@ -7,6 +7,8 @@
  *  makeBooking - POST /makeBooking
  *  checkUserType - GET /userType
  *  getBooking - GET /retrieveBooking
+ *  searchVouchers - POST /vouchers/search
+ * redeemVoucher - POST /voucher/redeem
  * 
  **/
 
@@ -14,8 +16,8 @@ import { giftVoucher } from "./giftVoucher";
 import { booking } from "./booking";
 
 
-//const apibase = "http://192.168.4.39:3001/"; //Home
-const apibase = "http://192.168.178.30:3001/"; //Anton
+const apibase = "http://192.168.4.39:3001/"; //Home
+//const apibase = "http://192.168.178.30:3001/"; //Anton
 //const apibase = "http://192.168.1.23:3001/"; // Oma
 //change to server address once installed on a separat server
 
@@ -339,8 +341,116 @@ export async function getBooking(bookingNumber:string)
   }
 }
 
-            }
+}
 
+/**
+ * Retrieves voucher(s) based on provided filters
+ * 
+ * error handling: throws an error if the service returns an error
+ * 
+ * @param filters   object containing optional search fields:
+ *                  reference, email, phone, name, purchaseDate
+ * @returns vouchers   array of voucher data matching the filters
+ */
+export async function searchVouchers(filters: {
+  reference?: string;
+  email?: string;
+  phone?: string;
+  name?: string;
+  purchaseDate?: string;
+}): Promise<any[]> {
+
+  // 🔒 Basic validation (optional but useful)
+  if (filters.reference && filters.reference.length !== 18) {
+    console.log("Invalid voucher reference");
+    alert("Voucher reference must be exactly 18 characters.");
+    return [];
+  }
+
+  console.log("Requesting voucher data with filters:", filters);
+
+  const url = `${apibase}vouchers/search`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST', // ✅ POST for flexible filters
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ filters }),
+    });
+
+    const json = await response.json();
+    const data = checkResponse(json);
+
+    console.log("Vouchers retrieved: " + JSON.stringify(data));
+
+    return data;
+  } 
+  catch (error: any) {
+    console.error("Fetch failed:", error);
+    alert("Error retrieving voucher data: " + (error.message || String(error)));
+    return []; // prevent app crash
+  }
+}
+
+/**
+ * Redeems a voucher (full or partial)
+ * 
+ * @param reference   voucher reference
+ * @param amount      optional amount for partial redemption
+ * @returns           updated voucher data
+ */
+export async function redeemVoucher(
+  reference: string,
+  amount?: string
+): Promise<any> {
+
+  if (reference.length !== 18) {
+    console.log("Invalid voucher reference");
+    alert("Voucher reference must be exactly 18 characters.");
+    return null;
+  }
+
+  console.log("Redeeming voucher:", reference, "amount:", amount);
+
+  const url = `${apibase}vouchers/redeem`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        reference,
+        amount
+      }),
+    });
+
+  
+   const text = await response.text();
+    // try to parse it as JSON, if it fails log the error and show an alert, then return null
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (e) {
+      console.error("JSON parse failed:", e);
+      alert("Server did not return valid JSON");
+      return null;
+    }
+   const data = checkResponse(json);
+
+    console.log("Redeem result:", data);
+
+    return data;
+
+  } catch (error: any) {
+    console.error("Redeem failed:", error);
+    alert("Error redeeming voucher: " + (error.message || String(error)));
+    return null;
+  }
+}
 
 
 

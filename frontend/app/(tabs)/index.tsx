@@ -17,10 +17,12 @@ export default function HomeScreen() {
           <Image
             source={require('@/assets/images/Restaurant-cover-picture.png')}
             style={ContainerStyles.titleImage}
+            accessible={true}
+            accessibilityLabel="Exterior view of the restaurant"
             />  
 
       <ThemedView style={ContainerStyles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
+        <ThemedText type="title" accessibilityRole="header">Welcome!</ThemedText>
       </ThemedView>
       <ThemedView style={ContainerStyles.stepContainer}>
         

@@ -1,6 +1,6 @@
 import { Tabs, useRouter } from 'expo-router';
 import React from 'react';
-import { Platform, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
@@ -20,13 +20,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-          ios: {
-            // Use a transparent background on iOS to show the blur effect
-            position: 'absolute',
-          },
-          default: {},
-        }),
+        tabBarStyle: {
+      backgroundColor: '#000000', // or your brand colour
+    },
       }}>
       <Tabs.Screen
         name="index"
@@ -48,6 +44,9 @@ export default function TabLayout() {
           {...props}
           {...buttonProps}
           ref={ref}
+          accessibilityRole="button"
+          accessibilityLabel="Menu tab"
+          accessibilityHint="Navigates to the menu screen"
           onPress={() => router.push('/menu')}
         />
       ));

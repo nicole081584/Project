@@ -1,6 +1,6 @@
 // app/(tabs)/menu/login/index.tsx
 import { useRouter } from 'expo-router';
-import { Image, TextInput, Pressable } from 'react-native';
+import { Image, TextInput, Pressable,AccessibilityInfo, Alert } from 'react-native';
 import React, { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -16,6 +16,7 @@ export default function LoginScreen() {
 
     const [emailUsername, setEmailUsername] = useState('');
     const [bookingNumberPassword, setBookingNumberPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
     const router = useRouter();
 
@@ -29,37 +30,48 @@ export default function LoginScreen() {
     
           //check and verify all fields are filled in correctly
           if (emailUsername ===''){
-            alert ("Please enter your Username");
+            const message = "Please enter your username";
+
+          Alert.alert(message); // 👀 visible popup
+          AccessibilityInfo.announceForAccessibility(message); // 🔊 screen reader
+  
           }
           else if (bookingNumberPassword === ''){
-            alert ("Please enter your Password.");
+            const message = "Please enter your Password.";
+
+            Alert.alert(message); // 👀 visible popup
+            AccessibilityInfo.announceForAccessibility(message); // 🔊 screen reader
           }
           else {
             const user = await checkUserType(emailUsername, bookingNumberPassword);
             if (user === 'admin') {
                 router.replace({
-                              pathname: '/menu/login/admin',
+                              pathname: '/admin',
                               params: {emailUsername},
                               });
                 handleReset();
                 
             }
             else {
-                alert('User not recognised! Please try again.');
+                const message = "User not recognised! Please try again.";
+                Alert.alert(message);
+                AccessibilityInfo.announceForAccessibility(message);
             }
           } }
 
   return (
-     <SafeAreaView style={{ flex: 1, backgroundColor: '#560324'}}>
+     <SafeAreaView accessible={false} style={{ flex: 1, backgroundColor: '#560324'}}>
     <ParallaxScrollView>
        
           <Image
             source={require('@/assets/images/Login.png')}
             style={ContainerStyles.titleImage}
+            accessible={true}
+            accessibilityLabel="Login page header image"
             />  
 
       <ThemedView style={ContainerStyles.titleContainer}>
-        <ThemedText type="title">Login</ThemedText>
+        <ThemedText type="title" accessibilityRole="header">Login</ThemedText>
       </ThemedView>
 
 
@@ -69,18 +81,45 @@ export default function LoginScreen() {
         placeholder="Enter Username"
         value={emailUsername}
         onChangeText={setEmailUsername}
+        accessibilityLabel="Username input field"
+        accessibilityHint="Enter your username"
       />
 
-      <ThemedText type = "subtitle">Password</ThemedText>
-      <TextInput
+      <ThemedView style={{ position: 'relative' }}>
+        <TextInput
         style={ButtonAndInputStyles.input}
         placeholder="Enter Password"
         value={bookingNumberPassword}
         onChangeText={setBookingNumberPassword}
+        secureTextEntry={!showPassword}
+        accessibilityLabel="Password input field"
+        accessibilityHint="Enter your password"
       />
 
+      <Pressable
+        onPress={() => setShowPassword((prev) => !prev)}
+        accessibilityRole="button"
+        accessibilityLabel={showPassword ? "Hide password" : "Show password"}
+        accessibilityHint="Toggles password visibility"
+        style={{
+          position: 'absolute',
+          right: 10,
+          top: '50%',
+          transform: [{ translateY: -12 }],
+          padding: 5,
+        }}
+    >
+      <ThemedText>
+          {showPassword ? '🙈' : '👁'}
+      </ThemedText>
+    </Pressable>
+    </ThemedView>
+
       <ThemedView >
-           <Pressable style={ButtonAndInputStyles.button} onPress={handleLogin}>
+           <Pressable style={ButtonAndInputStyles.button} onPress={handleLogin} 
+            accessibilityRole="button"
+            accessibilityLabel="Log in"
+            accessibilityHint="Press to Login">
               <ThemedText type= 'subtitle'>Login</ThemedText>
            </Pressable>
         </ThemedView>

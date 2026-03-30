@@ -56,20 +56,26 @@ const longitude =-2.5;
   
   // Returns the Contact screen view
   return (
-    
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#560324'}}>
+     
+    <SafeAreaView accessible={false} style={{ flex: 1, backgroundColor: '#560324'}}>
     <ParallaxScrollView>
        
           <Image
             source={require('@/assets/images/Contacts.png')}
             style={ContainerStyles.titleImage}
+            accessible={true}
+            accessibilityLabel="Contact page header image"
             />    
 
       <ThemedView style={ContainerStyles.titleContainer}>
-        <ThemedText type="title">Find Us</ThemedText>
+        <ThemedText type="title" accessibilityRole="header">Find Us</ThemedText>
       </ThemedView>
 
-      <ThemedView style = {ContainerStyles.mapContainer}>
+     <ThemedView style = {ContainerStyles.mapContainer}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel="Map showing restaurant location"
+      accessibilityHint="Swiper to explore the map">
       <MapView
         style={styles.map}
         initialRegion={{
@@ -87,22 +93,28 @@ const longitude =-2.5;
         />
       </MapView>
       </ThemedView>
-      <ThemedText type="default">{address}</ThemedText>
+      <ThemedText type="default" accessibilityLabel={`Address: ${address}`}>{address}</ThemedText>
 
       <ThemedView style={ContainerStyles.titleContainer}>
-        <ThemedText type="title">Contact Us</ThemedText>
+        <ThemedText type="title" accessibilityRole="header">Contact Us</ThemedText>
       </ThemedView>
 
-      <ThemedText type="default">Phone: {phoneNumber}</ThemedText>  
+      <ThemedText type="default" accessibilityLabel={`Phone: ${phoneNumber}`}>Phone: {phoneNumber}</ThemedText>  
       <ThemedView>
-        <Pressable style={ButtonAndInputStyles.button} onPress={handleCallPress}>
+        <Pressable style={ButtonAndInputStyles.button} onPress={handleCallPress}
+        accessibilityRole="button"
+        accessibilityLabel="Call the restaurant"
+        accessibilityHint="Opens your phone app to call the restaurant">
           <ThemedText>Call Us</ThemedText>
         </Pressable>
       </ThemedView>
       
-      <ThemedText type="default">Email: {emailAddress}</ThemedText>
+      <ThemedText type="default" accessibilityLabel={`Email: ${emailAddress}`}>Email: {emailAddress}</ThemedText>
       <ThemedView>
-        <Pressable style={ButtonAndInputStyles.button} onPress={handleEmailPress}>
+        <Pressable style={ButtonAndInputStyles.button} onPress={handleEmailPress}
+        accessibilityRole="button"
+        accessibilityLabel="Email the restaurant"
+        accessibilityHint="Opens your email app to send a message">
           <ThemedText>Email Us</ThemedText>
         </Pressable>
       </ThemedView>

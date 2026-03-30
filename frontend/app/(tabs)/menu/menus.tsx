@@ -13,16 +13,18 @@ export default function MenusScreen() {
 
   return (
     
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#560324'}}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#560324'} } accessible={false}>
     <ParallaxScrollView>
        
           <Image
             source={require('@/assets/images/Menu.png')}
             style={ContainerStyles.titleImage}
+            accessible={true}
+            accessibilityLabel="Picture of a menu on a table"
             />    
 
       <ThemedView style={ContainerStyles.titleContainer}>
-        <ThemedText type="title">Menus</ThemedText>
+        <ThemedText type="title" accessibilityRole="header">Menus</ThemedText>
       </ThemedView>
       <Collapsible title="Breakfast">
         <ThemedText>

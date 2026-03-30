@@ -62,16 +62,23 @@ class bookingServiceManager {
       if (row) {
         availableSlots = [];
         
+        let totalOnDate = 0;
+        
         //If there is still the number of covers needed available add time to available Slots
-        //Total number of guests per timeslot is 20 maximum
-        Object.keys(row).forEach((column) => {
-          if (column !== 'date') {
-            const booked = parseInt(row[column], 10);
-            if (booked <= (20 - numberOfGuests)) {
-              availableSlots.push(column);
-            }
-          }
-        });
+        //Total number of guests per timeslot is 20 maximum 
+        
+        allSlots.forEach((column) => {
+          const booked = parseInt(row[column], 10) || 0;
+          totalOnDate += booked;
+          if (booked <= (20 - numberOfGuests)) {
+                availableSlots.push(column);
+              }
+          });
+          
+          //Total number of guests per day is 40 maximum
+          if (totalOnDate > (40-numberOfGuests)) {
+          availableSlots = [];
+        };
       }
       // change date format to YYYY-MM-DD to determine weekday
       const [day, month, year] = date.split('/');
