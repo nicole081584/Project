@@ -8,7 +8,9 @@
  * -add Voucher 
  * -delet Voucher
  * -mail Voucher
- * -search Voucher 
+ * -search Voucher by reference
+ * -search sold vouchers by date range
+ * -search redeemed vouchers by date range
  * -redeem Voucher
  * 
  * 
@@ -25,6 +27,7 @@ require('dotenv').config();// use env file
 //Impport all Data base connections
 const { vouchersdb } = require('./prepareDatabases');
 const { redeemedVouchersdb } = require('./prepareDatabases');
+const { partRedemptionsdb } = require('./prepareDatabases');
 
 
 
@@ -42,45 +45,51 @@ class voucherServiceManager {
    * @returns true/false for voucher added
    */
   addVoucher(voucher, targetdatabase) {
-    return new Promise((resolve, reject) => {
+  return new Promise((resolve, reject) => {
 
-       let db;
-      if (targetdatabase === 'vouchers') {
-        db =vouchersdb;
-      }
-      else if (targetdatabase === 'redeemedVouchers'){
-        db =redeemedVouchersdb;
-      }
+    let db;
 
-      if (!db) {
-        console.error("Invalid database target:", targetdatabase);
-        reject("Invalid database target");
-        return;
-      }
-      db.run(
-        'INSERT INTO vouchers (id,title, firstName, lastName, phoneNumber, email, value, purchaseDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [
-          voucher.voucherNumber,
-          voucher.title,
-          voucher.firstName,
-          voucher.lastName,
-          voucher.phoneNumber,
-          voucher.email,
-          voucher.value,
-          voucher.purchaseDate
-        ],
-        function (err) {
-          if (err) {
-            console.error('Error writing to database:', err);
-            reject(err);
-          } else {
-            console.log('Voucher added successfully.');
-            resolve(true);
-          }
+    if (targetdatabase === 'vouchers') {
+      db = vouchersdb;
+    }
+    else if (targetdatabase === 'redeemedVouchers') {
+      db = redeemedVouchersdb;
+    }
+
+    if (!db) {
+      console.error("Invalid database target:", targetdatabase);
+      reject("Invalid database target");
+      return;
+    }
+
+    db.run(
+      `INSERT INTO vouchers 
+      (id, title, firstName, lastName, phoneNumber, email, value, purchaseDate, adjustedValue, dateUsed) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        voucher.voucherNumber,
+        voucher.title,
+        voucher.firstName,
+        voucher.lastName,
+        voucher.phoneNumber,
+        voucher.email,
+        voucher.value,
+        voucher.date,
+        voucher.adjustedValue ?? null,
+        voucher.dateUsed ?? null
+      ],
+      function (err) {
+        if (err) {
+          console.error('Error writing to database:', err);
+          reject(err);
+        } else {
+          console.log('Voucher added successfully.');
+          resolve(true);
         }
-      );
-    });
-  }
+      }
+    );
+  });
+}
 
   /**
    * Function that delets a voucher from the specified database and returns sucess or failure
@@ -251,12 +260,236 @@ getVoucherByReference(reference) {
   });
 }
 
+/**
+ * Retrieves total redeemed values for vouchers within a date range
+ * 
+ * This function queries the partRedemptions database and returns
+ * the total amount redeemed per voucher within the specified period.
+ * 
+ * error handling: throws an error if the database query fails
+ * 
+ * @param {string} fromDate   start date (YYYY-MM-DD)
+ * @param {string} toDate     end date (YYYY-MM-DD)
+ * @returns Promise resolving to an object mapping voucherNumber → total redeemed value
+ */
+getRedemptionTotals(fromDate, toDate) {
+  return new Promise((resolve, reject) => {
+
+    partRedemptionsdb.all(
+      `
+      SELECT voucherNumber, SUM(valueRedeemed) as total
+      FROM partRedemptions
+      WHERE date >= ? AND date <= ?
+      GROUP BY voucherNumber
+      `,
+      [fromDate, toDate],
+      (err, rows) => {
+
+        if (err) {
+          console.error("Error retrieving redemption totals:", err);
+          reject(err);
+        } 
+        else if (!rows || rows.length === 0) {
+          console.warn("No redemption records found in date range");
+          resolve({});
+        } 
+        else {
+          console.log("Redemption totals retrieved successfully:", rows);
+
+          // Convert rows into lookup object
+          const totals = {};
+
+          rows.forEach(row => {
+            totals[row.voucherNumber] = row.total;
+          });
+
+          resolve(totals);
+        }
+      }
+    );
+  });
+}
+
 
 /**
- * Function that redeems a voucher either fully or partially.
+ * Retrieves vouchers redeemed within a date range
+ * Includes both partially and fully redeemed vouchers
  * 
- * If the voucher is fully redeemed (value becomes 0), it is moved to the redeemedVouchers database.
- * Otherwise, the adjusted value is updated in the vouchers database.
+ * @param {string} fromDate   start date (YYYY-MM-DD)
+ * @param {string} toDate     end date (YYYY-MM-DD)
+ * @returns Promise resolving to an array of voucher objects
+ */
+getRedeemedVouchers(fromDate, toDate) {
+  return new Promise(async (resolve, reject) => {
+
+    try {
+
+      // 🔹 1. Get totals for partial redemptions
+      const totalsMap = await this.getRedemptionTotals(fromDate, toDate);
+
+      // 🔹 2. Get partially redeemed vouchers
+      const partials = await new Promise((res, rej) => {
+        vouchersdb.all(
+          `
+          SELECT * FROM vouchers
+          WHERE dateUsed IS NOT NULL
+          `,
+          [],
+          (err, rows) => {
+            if (err) return rej(err);
+            res(rows || []);
+          }
+        );
+      });
+
+      // 🔹 3. Transform partial vouchers
+      const transformedPartials = partials
+        .filter(v => totalsMap[v.id]) // only those with activity in range
+        .map(v => ({
+          voucherNumber: v.id,
+          title: v.title,
+          firstName: v.firstName,
+          lastName: v.lastName,
+          phoneNumber: v.phoneNumber,
+          email: v.email,
+
+          // 🔥 KEY CHANGE: override value
+          value: totalsMap[v.id],
+
+          date: v.purchaseDate,
+          dateUsed: v.dateUsed,
+          status: 'part-redeemed'
+        }));
+
+      // 🔹 4. Fully redeemed vouchers
+      const full = await new Promise((res, rej) => {
+        redeemedVouchersdb.all(
+          `
+          SELECT * FROM vouchers
+          WHERE dateUsed >= ? AND dateUsed <= ?
+          `,
+          [fromDate, toDate],
+          (err, rows) => {
+            if (err) return rej(err);
+            res(rows || []);
+          }
+        );
+      });
+
+      const transformedFull = full.map(v => ({
+        voucherNumber: v.id,
+        title: v.title,
+        firstName: v.firstName,
+        lastName: v.lastName,
+        phoneNumber: v.phoneNumber,
+        email: v.email,
+
+        // 🔥 FULL VALUE counts
+        value: v.value,
+
+        date: v.purchaseDate,
+        dateUsed: v.dateUsed,
+        status: 'fully-redeemed'
+      }));
+
+      const results = [...transformedPartials, ...transformedFull];
+
+      console.log("Redeemed report:", results);
+
+      resolve(results);
+
+    } catch (error) {
+      console.error("Error retrieving redeemed vouchers:", error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Retrieves vouchers sold within a date range
+ * Includes vouchers that may have since been redeemed
+ * 
+ * @param {string} fromDate   start date (YYYY-MM-DD)
+ * @param {string} toDate     end date (YYYY-MM-DD)
+ * @returns Promise resolving to an array of voucher objects
+ */
+getSoldVouchers(fromDate, toDate) {
+  return new Promise((resolve, reject) => {
+
+    const query = `
+      SELECT * FROM vouchers
+      WHERE purchaseDate >= ? AND purchaseDate <= ?
+    `;
+
+    // --- CURRENT VOUCHERS (not fully redeemed)
+    vouchersdb.all(query, [fromDate, toDate], (err, rows1) => {
+
+      if (err) {
+        console.error('Error retrieving sold vouchers (active):', err);
+        reject(err);
+        return;
+      }
+
+      const active = (rows1 || []).map(row => ({
+        title: row.title,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        phoneNumber: row.phoneNumber,
+        email: row.email,
+        value: row.value,
+        date: row.purchaseDate,
+        voucherNumber: row.id,
+        adjustedValue: row.adjustedValue || null,
+        dateUsed: row.dateUsed || null,
+        status: 'sold-active'
+      }));
+      console.log('Active vouchers retrieved successfully:', active);
+
+      // --- FULLY REDEEMED (still need to count as sold!)
+      redeemedVouchersdb.all(query, [fromDate, toDate], (err2, rows2) => {
+
+        if (err2) {
+          console.error('Error retrieving sold vouchers (redeemed):', err2);
+          reject(err2);
+          return;
+        }
+
+        const redeemed = (rows2 || []).map(row => ({
+          title: row.title,
+          firstName: row.firstName,
+          lastName: row.lastName,
+          phoneNumber: row.phoneNumber,
+          email: row.email,
+          value: row.value,
+          date: row.purchaseDate,
+          voucherNumber: row.id,
+          adjustedValue: row.adjustedValue || null,
+          dateUsed: row.dateUsed || null,
+          status: 'sold-redeemed'
+        }));
+        console.log('redeemed vouchers retrieved successfully:', redeemed);
+
+
+
+        const results = [...active, ...redeemed];
+
+        console.log('Sold vouchers retrieved successfully:', results);
+
+        resolve(results);
+      });
+    });
+  });
+}
+
+/**
+ * Redeems a voucher either fully or partially
+ * 
+ * This function retrieves a voucher by reference and calculates the remaining value.
+ * If an amount is provided, it is deducted from the current value (or adjustedValue if present).
+ * Partial redemptions update the voucher and are recorded in the partRedemptions database.
+ * Full redemptions move the voucher to the redeemedVouchers database.
+ * 
+ * error handling: throws an error if retrieval, update, or database operations fail
  * 
  * @param {string} reference   unique voucher number
  * @param {number} amount      optional amount to redeem
@@ -283,34 +516,41 @@ async redeemVoucher(reference, amount) {
           return;
         }
 
-        // determine current value of voucher
+        // --- CURRENT VALUE ---
         const currentValue = row.adjustedValue
           ? parseFloat(row.adjustedValue)
-          : row.value;
+          : parseFloat(row.value);
 
         let newValue;
 
-        // full redemption if no amount provided
-        if (!amount) {
-          newValue = 0;
-        } else {
-          const parsedAmount = parseFloat(amount);
+        // --- CLEAN AMOUNT HANDLING ---
+        const parsedAmount = amount ? parseFloat(amount) : null;
 
-          // prevent redeeming more than available
+        // --- FULL REDEMPTION ---
+        if (!parsedAmount) {
+          newValue = 0;
+        } 
+        else {
+
+          if (parsedAmount <= 0) {
+            resolve({ error: "Invalid redemption amount" });
+            return;
+          }
+
           if (parsedAmount > currentValue) {
-            resolve({
-              error: "Amount exceeds voucher value"
-            });
+            resolve({ error: "Amount exceeds voucher value" });
             return;
           }
 
           newValue = currentValue - parsedAmount;
         }
 
-        const dateUsed = new Date().toLocaleDateString("en-GB");
+        // --- DATE USED ---
+        const dateUsed = new Date().toISOString().split('T')[0];
 
-        // create updated voucher object
+        // --- UPDATED VOUCHER ---
         const updatedVoucher = {
+          voucherNumber: row.id,
           title: row.title,
           firstName: row.firstName,
           lastName: row.lastName,
@@ -318,32 +558,46 @@ async redeemVoucher(reference, amount) {
           email: row.email,
           value: row.value,
           date: row.purchaseDate,
-          voucherNumber: row.id,
           adjustedValue: newValue.toString(),
           dateUsed: dateUsed
         };
 
         try {
 
-          // if fully redeemed move to redeemedVouchers database
+          // ==============================
+          // FULL REDEMPTION
+          // ==============================
           if (newValue === 0) {
 
             console.log("Voucher fully redeemed, moving to redeemedVouchers database");
 
             const added = await this.addVoucher(updatedVoucher, 'redeemedVouchers');
 
-            if (added) {
-              await this.deletVoucher(updatedVoucher, 'vouchers');
-            } else {
-              resolve({
-                error: "Failed to move voucher to redeemed database"
-              });
+            if (!added) {
+              resolve({ error: "Failed to move voucher to redeemed database" });
               return;
             }
 
-          } else {
+            await this.deletVoucher(updatedVoucher, 'vouchers');
+          }
 
-            // partial redemption, update existing voucher
+          // ==============================
+          // PARTIAL REDEMPTION
+          // ==============================
+          else {
+
+            partRedemptionsdb.run(
+              'INSERT INTO partRedemptions (voucherNumber, valueRedeemed, date) VALUES (?, ?, ?)',
+              [reference, parsedAmount, dateUsed],
+              function (err) {
+              if (err) {
+              console.error("Error inserting redemption record:", err);
+              } else {
+              console.log("Partial redemption recorded");
+            }
+            }
+          );
+
             vouchersdb.run(
               'UPDATE vouchers SET adjustedValue = ?, dateUsed = ? WHERE id = ?',
               [newValue.toString(), dateUsed, reference],
@@ -370,8 +624,6 @@ async redeemVoucher(reference, amount) {
     );
   });
 }
-
-
 
 } //closing bracket for the serviceManager class
 

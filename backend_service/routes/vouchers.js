@@ -103,7 +103,7 @@ router.post('/redeem', jsonParser, async (request, response) => {
     // generate a 18 digit random voucher number with nanoid  
     const voucherNumber = nanoid(18);
     //get purchase date
-    const purchaseDate = new Date().toLocaleDateString("en-GB");
+    const purchaseDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     //add all values to one instance of voucher
     var voucher = new giftVoucher_js.giftVoucher(title, firstName, lastName, phoneNumber, email, value);
     voucher.voucherNumber = voucherNumber;
@@ -152,6 +152,7 @@ router.post('/redeem', jsonParser, async (request, response) => {
 }
 
 /**
+ * The implementation of the POST /voucher/search route.
  * Searches for voucher(s) based on filters
  *
  * @param filters   object containing search fields (e.g. reference, email, phone)
@@ -164,17 +165,27 @@ async function searchVoucher(filters) {
     try {
         let vouchers = [];
 
-        // 🔍 Most important: search by voucherNumber
-        if (filters.reference) {
-            vouchers = await voucherManager.getVoucherByReference(filters.reference);
-        }
-        // Future: add more search options (e.g. by email, phone) here
+        const { reference, fromDate, toDate, status } = filters;
 
-        // No filters provided
+        // --- SEARCH BY REFERENCE ---
+        if (reference) {
+            vouchers = await voucherManager.getVoucherByReference(reference);
+        }
+
+        // --- SOLD ---
+        else if (fromDate && toDate && status === 'sold') {
+            vouchers = await voucherManager.getSoldVouchers(fromDate, toDate);
+        }
+
+        // --- REDEEMED ---
+        else if (fromDate && toDate && status === 'redeemed') {
+            vouchers = await voucherManager.getRedeemedVouchers(fromDate, toDate);
+        }
+
         else {
             return JSON.stringify({
                 status: "error",
-                message: "No search filters provided"
+                message: "Invalid search filters"
             });
         }
 
@@ -185,15 +196,10 @@ async function searchVoucher(filters) {
             });
         }
 
-        // Convert to JSON string array
-        const result = JSON.stringify({
-        status: "success",
-        data: vouchers
+        return JSON.stringify({
+            status: "success",
+            data: vouchers
         });
-
-        console.log("Search result:", result);
-
-        return result;
 
     } catch (err) {
         console.error("Error searching vouchers:", err);

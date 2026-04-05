@@ -15,9 +15,16 @@ import Footer from '@/components/Footer';
 import ContainerStyles from '@/components/ContainerStyles';
 import ButtonAndInputStyles from '@/components/ButtonAndInputStyles';
 import { searchVouchers } from '@/libraries/backendService';
+import TableStyles from '@/components/TableStyles';
+import * as Print from 'expo-print';
 
 export default function VouchersAdminScreen() {
   const router = useRouter();
+
+  const [stage, setStage] = useState<'management' | 'results'>('management');
+  const [results, setResults] = useState<any[]>([]);
+  const [resultType, setResultType] = useState<'sold' | 'redeemed' | null>(null);
+  const [resultDates, setResultDates] = useState<{ from: string; to: string } | null>(null);
 
   const [fromDate, setFromDate] = useState<Date | null>(null);
   const [toDate, setToDate] = useState<Date | null>(null);
@@ -28,10 +35,97 @@ export default function VouchersAdminScreen() {
   const [isSold, setIsSold] = useState(false);
   const [isRedeemed, setIsRedeemed] = useState(false);
 
-  const formatDate = (date: Date | null) => {
+  const formatDate = (date: Date | null) => { // Format as YYYY-MM-DD for input display
     if (!date) return '';
     return date.toLocaleDateString();
   };
+
+  const formatUKDate = (date: string | Date | null) => {
+  if (!date) return '';
+
+  // If already a Date object
+  if (date instanceof Date) {
+    return date.toLocaleDateString('en-GB');
+  }
+
+  // If it's a string (YYYY-MM-DD)
+  if (typeof date === 'string') {
+    const parts = date.split('-');
+
+    // Only handle expected format safely
+    if (parts.length === 3) {
+      const [year, month, day] = parts;
+      return `${day}/${month}/${year}`;
+    }
+
+    // fallback (just in case)
+    return new Date(date).toLocaleDateString('en-GB');
+  }
+
+  return '';
+};
+
+  const handlePrint = async () => {
+  const total = results.reduce((sum, v) => sum + v.value, 0);
+
+  const sortedForPrint = [...results].sort((a, b) => {
+  const dateA = resultType === 'redeemed' ? a.dateUsed : a.date;
+  const dateB = resultType === 'redeemed' ? b.dateUsed : b.date;
+
+  if (dateA < dateB) return -1;
+  if (dateA > dateB) return 1;
+
+  return a.voucherNumber.localeCompare(b.voucherNumber);
+});
+
+  const html = `
+    <h1>${resultType === 'sold' ? 'Vouchers Sold' : 'Vouchers Redeemed'}</h1>
+
+    <p>
+      ${
+  resultDates?.from === resultDates?.to
+    ? formatUKDate(resultDates?.from ?? null)
+    : `${formatUKDate(resultDates?.from ?? null)} - ${formatUKDate(resultDates?.to ?? null)}`
+}
+    </p>
+
+    <table style="width:100%; border-collapse: collapse;">
+
+      <tr>
+        <th style="border:1px solid #000; padding:8px;">#</th>
+        <th style="border:1px solid #000; padding:8px;">Voucher</th>
+        <th style="border:1px solid #000; padding:8px;">Date</th>
+        <th style="border:1px solid #000; padding:8px; text-align:right;">
+          ${resultType === 'sold' ? 'Value (£)' : 'Redeemed (£)'}
+        </th>
+      </tr>
+
+      ${sortedForPrint.map((v, i) => `
+        <tr>
+          <td style="border:1px solid #000; padding:6px;">${i + 1}</td>
+          <td style="border:1px solid #000; padding:6px;">${v.voucherNumber}</td>
+          <td style="border:1px solid #000; padding:6px;">${formatUKDate(resultType === 'redeemed' ? v.dateUsed : v.date)}</td>
+          <td style="border:1px solid #000; padding:6px; text-align:right;">
+            £${v.value}
+          </td>
+        </tr>
+      `).join('')}
+
+      <!-- TOTAL ROW -->
+      <tr>
+        <td colspan="3" style="padding:8px; text-align:right; font-weight:bold;">
+          Total
+        </td>
+        <td style="border-top:2px solid #000; padding:8px; text-align:right; font-weight:bold;">
+          £${total}
+        </td>
+      </tr>
+
+    </table>
+  `;
+
+  await Print.printAsync({ html });
+};
 
   const handleValidation = () => {
   // 1. Dates must exist
@@ -105,14 +199,32 @@ const handleRetrieval = async (
     };
   }
 
-  const results = await searchVouchers(filters);
+  const data = await searchVouchers(filters);
 
-  console.log("Results:", results);
+    const sortedResults = [...data].sort((a, b) => {
+  // 1. Sort by date
+  if (a.date < b.date) return -1;
+  if (a.date > b.date) return 1;
+
+  // 2. Then by voucherNumber
+  return a.voucherNumber.localeCompare(b.voucherNumber);
+});
+
+setResults(sortedResults);
+setResultType(filters.status);
+setResultDates({
+  from: filters.fromDate,
+  to: filters.toDate,
+});
+
+setStage('results');
 
 };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#560324' }}>
+
+      {stage === 'management' && (
       <ParallaxScrollView>
 
         {/* Header Image */}
@@ -324,6 +436,114 @@ const handleRetrieval = async (
         <Footer />
 
       </ParallaxScrollView>
-    </SafeAreaView>
+      )}
+
+
+      {stage === 'results' && (
+
+       <ParallaxScrollView>
+
+        {/* Header Image */}
+        <Image
+          source={require('@/assets/images/admin.png')}
+          style={ContainerStyles.titleImage}
+          accessible={true}
+          accessibilityLabel="Admin vouchers page header image"
+        />
+
+        <ThemedView >
+        <ThemedView style={ContainerStyles.titleContainer}>
+        {/* Title */}
+        <ThemedText type="title">
+          {resultType === 'sold' ? 'Vouchers Sold' : 'Vouchers Redeemed'}
+        </ThemedText>
+        </ThemedView>
+
+        <ThemedView style={{ paddingHorizontal: 20, marginBottom: 10 }}>
+          {/* Date */}
+          <ThemedText type="subtitle">
+          {
+            resultDates?.from === resultDates?.to
+            ? formatUKDate(resultDates?.from ?? null)
+            : `${formatUKDate(resultDates?.from ?? null)} - ${formatUKDate(resultDates?.to ?? null)}`
+        }
+        </ThemedText>
+        </ThemedView>
+        
+
+        <View style={TableStyles.headerRow}>
+
+        <View style={[TableStyles.cell, TableStyles.colIndex]}>
+          <ThemedText style={TableStyles.bold}>#</ThemedText>
+        </View>
+
+        <View style={[TableStyles.cell, TableStyles.colVoucher]}>
+          <ThemedText style={TableStyles.bold}>Voucher</ThemedText>
+        </View>
+
+        <View style={[TableStyles.cell, TableStyles.colValue]}>
+          <ThemedText style={TableStyles.bold}>
+            {resultType === 'sold' ? 'Value' : 'Redeemed'}
+          </ThemedText>
+        </View>
+
+      </View>
+
+        {/* Table */}
+        {results.map((item, index) => (
+          <View key={item.voucherNumber} style={TableStyles.row}>
+
+            <View style={[TableStyles.cell, TableStyles.colIndex]}>
+              <ThemedText style={TableStyles.bold}>
+                {index + 1}
+              </ThemedText>
+            </View>
+
+            <View style={[TableStyles.cell, TableStyles.colVoucher]}>
+              <ThemedText>
+                {item.voucherNumber}
+              </ThemedText>
+            </View>
+
+            <View style={[TableStyles.cell, TableStyles.colValue]}>
+              <ThemedText>
+                £{item.value}
+              </ThemedText>
+            </View>
+
+          </View>
+        ))}
+
+        {/* Total */}
+        <ThemedText style={{ marginTop: 10, textAlign: 'right', fontWeight: 'bold' }}>
+          Total: £{results.reduce((sum, v) => sum + v.value, 0)}
+        </ThemedText>
+
+        {/* Print */}
+        <Pressable
+          style={ButtonAndInputStyles.button}
+          onPress={handlePrint}
+          accessibilityRole="button"
+          accessibilityLabel="Print voucher report"
+        >
+          <ThemedText>🖨 Print Report</ThemedText>
+        </Pressable>
+
+        {/* Back */}
+        <Pressable
+          style={ButtonAndInputStyles.button}
+          onPress={() => setStage('management')}
+          accessibilityRole="button"
+          accessibilityLabel="Back to voucher management"
+        >
+          <ThemedText>← Back to Voucher Managment</ThemedText>
+        </Pressable>
+
+          </ThemedView>
+          <Footer />
+          </ParallaxScrollView>
+      )}
+      
+      </SafeAreaView>
   );
 }

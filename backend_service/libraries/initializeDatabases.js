@@ -1,5 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
 const bcrypt = require('bcrypt'); 
+const { partRedemptionsdb } = require('./prepareDatabases');
 
 const voucherdb = new sqlite3.Database('./db/vouchers.db');
 const redeemedVouchersdb = new sqlite3.Database('./db/redeemedVouchers.db');
@@ -98,6 +99,15 @@ function initializeDatabases() {
       dateBookingWasMade TEXT
     )
   `);
+    // Create partRedemptions table
+  partRedemptionsdb.run(`
+  CREATE TABLE IF NOT EXISTS partRedemptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    voucherNumber TEXT,
+    valueRedeemed REAL,
+    date TEXT
+  )
+`);
 
   // Create Admin table and insert default admin if it doesn't already exist
   admindb.serialize(() => {
@@ -134,5 +144,6 @@ module.exports = {
   bookingSlotsdb,
   bookingsdb,
   pastBookingsdb,
-  admindb
+  admindb,
+  partRedemptionsdb
 };

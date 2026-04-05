@@ -53,7 +53,7 @@ const vouchersdb = new sqlite3_4.Database('./db/vouchers.db', (err) => {
   }
 });
 
-//Prepare database
+//Prepare redeemedVouchers database
 const sqlite3_5 = require('sqlite3').verbose();
 //Connect to database
 const redeemedVouchersdb  = new sqlite3_5.Database('./db/redeemedVouchers.db', (err) => {
@@ -64,11 +64,24 @@ const redeemedVouchersdb  = new sqlite3_5.Database('./db/redeemedVouchers.db', (
   }
 });
 
+//Prepare redeemedVouchers database
+const sqlite3_6 = require('sqlite3').verbose();
+//Connect to database
+const partRedemptionsdb  = new sqlite3_6.Database('./db/partRedemptions.db', (err) => {
+  if (err) {
+    console.error('Could not connect to the partRedemptions database:', err);
+  } else {
+    console.log('Connected to partRedemptions.db');
+  }
+});
+
+
 module.exports = {
   bookingSlotsdb,
   bookingsdb,
   pastBookingsdb,
   admindb,
   vouchersdb,
-  redeemedVouchersdb
+  redeemedVouchersdb,
+  partRedemptionsdb
 };
