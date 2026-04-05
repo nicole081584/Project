@@ -8,8 +8,6 @@
  * -add Voucher 
  * -delet Voucher
  * -mail Voucher
- * -search Voucher 
- * -redeem Voucher
  * 
  * 
  * uses the vouchers data Base 
@@ -51,12 +49,6 @@ class voucherServiceManager {
       else if (targetdatabase === 'redeemedVouchers'){
         db =redeemedVouchersdb;
       }
-
-      if (!db) {
-        console.error("Invalid database target:", targetdatabase);
-        reject("Invalid database target");
-        return;
-      }
       db.run(
         'INSERT INTO vouchers (id,title, firstName, lastName, phoneNumber, email, value, purchaseDate) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         [
@@ -91,17 +83,11 @@ class voucherServiceManager {
   deletVoucher(voucher, targetdatabase) {
     return new Promise((resolve, reject) => {
       let db;
-
       if (targetdatabase === 'vouchers') {
-        db = vouchersdb;
+        db =vdb;
       }
       else if (targetdatabase === 'redeemedVouchers'){
-        db = redeemedVouchersdb;
-      }
-      if (!db) {
-        console.error("Invalid database target:", targetdatabase);
-        reject("Invalid database target");
-        return;
+        db =rvdb;
       }
       db.run(
         'DELETE FROM vouchers WHERE id = ?',
@@ -206,170 +192,6 @@ Phone: 028 3883 2444.`,
   }
 }
 
-/**
- * Retrieves a voucher by its reference (voucherNumber)
- * 
- * @param {string} reference   unique voucher reference
- * @returns Promise resolving to an array of voucher objects
- */
-getVoucherByReference(reference) {
-  return new Promise((resolve, reject) => {
-
-    const db = vouchersdb;
-
-    db.all(
-      'SELECT * FROM vouchers WHERE id = ?',
-      [reference],
-      (err, rows) => {
-        if (err) {
-          console.error('Error retrieving voucher:', err);
-          reject(err);
-        } else if (!rows || rows.length === 0) {
-          console.warn('No voucher found for reference:', reference);
-          resolve([]); // important: return empty array
-        } else {
-          console.log('Voucher retrieved successfully:', rows);
-
-          // Map DB rows → voucher objects
-          const vouchers = rows.map(row => ({
-            title: row.title,
-            firstName: row.firstName,
-            lastName: row.lastName,
-            phoneNumber: row.phoneNumber,
-            email: row.email,
-            value: row.value,
-            date: row.purchaseDate,
-            voucherNumber: row.id,
-            adjustedValue: row.adjustedValue || null,
-            dateUsed: row.dateUsed || null
-          }));
-
-          resolve(vouchers);
-        }
-      }
-    );
-  });
-}
-
-
-/**
- * Function that redeems a voucher either fully or partially.
- * 
- * If the voucher is fully redeemed (value becomes 0), it is moved to the redeemedVouchers database.
- * Otherwise, the adjusted value is updated in the vouchers database.
- * 
- * @param {string} reference   unique voucher number
- * @param {number} amount      optional amount to redeem
- * @returns                   object containing voucherNumber and remainingValue OR error
- */
-async redeemVoucher(reference, amount) {
-
-  return new Promise((resolve, reject) => {
-
-    vouchersdb.get(
-      'SELECT * FROM vouchers WHERE id = ?',
-      [reference],
-      async (err, row) => {
-
-        if (err) {
-          console.error("Error retrieving voucher:", err);
-          reject(err);
-          return;
-        }
-
-        if (!row) {
-          console.warn("Voucher not found:", reference);
-          resolve(null);
-          return;
-        }
-
-        // determine current value of voucher
-        const currentValue = row.adjustedValue
-          ? parseFloat(row.adjustedValue)
-          : row.value;
-
-        let newValue;
-
-        // full redemption if no amount provided
-        if (!amount) {
-          newValue = 0;
-        } else {
-          const parsedAmount = parseFloat(amount);
-
-          // prevent redeeming more than available
-          if (parsedAmount > currentValue) {
-            resolve({
-              error: "Amount exceeds voucher value"
-            });
-            return;
-          }
-
-          newValue = currentValue - parsedAmount;
-        }
-
-        const dateUsed = new Date().toLocaleDateString("en-GB");
-
-        // create updated voucher object
-        const updatedVoucher = {
-          title: row.title,
-          firstName: row.firstName,
-          lastName: row.lastName,
-          phoneNumber: row.phoneNumber,
-          email: row.email,
-          value: row.value,
-          date: row.purchaseDate,
-          voucherNumber: row.id,
-          adjustedValue: newValue.toString(),
-          dateUsed: dateUsed
-        };
-
-        try {
-
-          // if fully redeemed move to redeemedVouchers database
-          if (newValue === 0) {
-
-            console.log("Voucher fully redeemed, moving to redeemedVouchers database");
-
-            const added = await this.addVoucher(updatedVoucher, 'redeemedVouchers');
-
-            if (added) {
-              await this.deletVoucher(updatedVoucher, 'vouchers');
-            } else {
-              resolve({
-                error: "Failed to move voucher to redeemed database"
-              });
-              return;
-            }
-
-          } else {
-
-            // partial redemption, update existing voucher
-            vouchersdb.run(
-              'UPDATE vouchers SET adjustedValue = ?, dateUsed = ? WHERE id = ?',
-              [newValue.toString(), dateUsed, reference],
-              function (updateErr) {
-
-                if (updateErr) {
-                  console.error("Error updating voucher:", updateErr);
-                  reject(updateErr);
-                }
-              }
-            );
-          }
-
-          resolve({
-            voucherNumber: reference,
-            remainingValue: newValue
-          });
-
-        } catch (error) {
-          console.error("Error processing voucher redemption:", error);
-          reject(error);
-        }
-      }
-    );
-  });
-}
 
 
 

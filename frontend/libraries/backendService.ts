@@ -16,8 +16,8 @@ import { giftVoucher } from "./giftVoucher";
 import { booking } from "./booking";
 
 
-const apibase = "http://192.168.4.39:3001/"; //Home
-//const apibase = "http://192.168.178.30:3001/"; //Anton
+//const apibase = "http://192.168.4.39:3001/"; //Home
+const apibase = "http://192.168.178.30:3001/"; //Anton
 //const apibase = "http://192.168.1.23:3001/"; // Oma
 //change to server address once installed on a separat server
 
@@ -349,7 +349,7 @@ export async function getBooking(bookingNumber:string)
  * error handling: throws an error if the service returns an error
  * 
  * @param filters   object containing optional search fields:
- *                  reference, email, phone, name, purchaseDate
+ *                  reference, email, phone, name, purchaseDate, from Date, to Date, status (sold/redeemed)
  * @returns vouchers   array of voucher data matching the filters
  */
 export async function searchVouchers(filters: {
@@ -358,9 +358,11 @@ export async function searchVouchers(filters: {
   phone?: string;
   name?: string;
   purchaseDate?: string;
+  fromDate?: string;
+  toDate?: string;
+  status?: 'sold' | 'redeemed';
 }): Promise<any[]> {
 
-  // 🔒 Basic validation (optional but useful)
   if (filters.reference && filters.reference.length !== 18) {
     console.log("Invalid voucher reference");
     alert("Voucher reference must be exactly 18 characters.");
@@ -373,7 +375,7 @@ export async function searchVouchers(filters: {
 
   try {
     const response = await fetch(url, {
-      method: 'POST', // ✅ POST for flexible filters
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
@@ -386,11 +388,11 @@ export async function searchVouchers(filters: {
     console.log("Vouchers retrieved: " + JSON.stringify(data));
 
     return data;
-  } 
-  catch (error: any) {
+
+  } catch (error: any) {
     console.error("Fetch failed:", error);
     alert("Error retrieving voucher data: " + (error.message || String(error)));
-    return []; // prevent app crash
+    return [];
   }
 }
 

@@ -84,7 +84,8 @@ export default function LoginScreen() {
         accessibilityLabel="Username input field"
         accessibilityHint="Enter your username"
       />
-
+      
+      <ThemedText type = "subtitle">Password</ThemedText>
       <ThemedView style={{ position: 'relative' }}>
         <TextInput
         style={ButtonAndInputStyles.input}
