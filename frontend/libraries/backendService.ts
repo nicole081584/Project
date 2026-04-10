@@ -6,7 +6,7 @@
  *  getBookingSlots - GET /bookingSlots
  *  makeBooking - POST /makeBooking
  *  checkUserType - GET /userType
- *  getBooking - GET /retrieveBooking
+ *  getBooking - POST /bookings/search
  *  searchVouchers - POST /vouchers/search
  * redeemVoucher - POST /voucher/redeem
  * 
@@ -298,51 +298,57 @@ export async function checkUserType(emailUsername: string, bookingNumberPassword
 }
 
 /**
- * Retrieves a booking for a given booking Number
+ * Searches bookings using flexible filters (e.g. date range)
  * 
- * error handling: throws an error if the service returns an error
- * 
- * @param bookingNumber     unique ID number for a booking
- * @returns bookingslots    full booking data for the booking
+ * @param filter   type of search filter (e.g. 'date')
+ * @param from     start date (YYYY-MM-DD)
+ * @param to       end date (YYYY-MM-DD)
+ * @returns bookings   array of booking data
  */
-export async function getBooking(bookingNumber:string)
-            :Promise<booking[]> {
+export async function searchBookings(
+  filter: string,
+  from?: string,
+  to?: string
+): Promise<booking[]> {
 
-    if (bookingNumber.length != 12){
-      console.log("Invalid booking Number");
-      alert ("This is not a valid booking Number.");
-      return [];
-    }
+  console.log("Requesting booking search with:", {
+    filter,
+    from,
+    to
+  });
 
-    else {
-  
-   console.log("Requesting booking data for: ", {bookingNumber});
+  const url = `${apibase}bookings/search`;
 
-   const url = `${apibase}retrieveBooking?bookingNumber=${bookingNumber}`;
+  // ✅ BUILD BODY (no ISO conversion!)
+  const body: any = {
+    filter
+  };
 
+  if (from) body.from = from;
+  if (to) body.to = to;
 
   try {
     const response = await fetch(url, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(body),
     });
 
     const json = await response.json();
     const data = checkResponse(json);
-    console.log ("Booking retrieved: " +JSON.stringify(data))
+
+    console.log("Bookings retrieved:", data);
+
     return data;
-  } 
-  catch (error: any) {
+
+  } catch (error: any) {
     console.error("Fetch failed:", error);
-    alert("Error retrieving booking Data: " + (error.message || String(error)));
-    return []; // return an empty array so the app doesn't crash
+    alert("Error retrieving booking data: " + (error.message || String(error)));
+    return [];
   }
 }
-
-}
-
 /**
  * Retrieves voucher(s) based on provided filters
  * 

@@ -11,6 +11,7 @@ const nodemailer = require('nodemailer'); //used for emailing
  * - add booking 
  * - delet booking
  * - email booking
+ * - search bookings by filter (e.g. date range)
  * 
  * uses the bookingSlots and bookings data Bases 
  */
@@ -305,6 +306,51 @@ class bookingServiceManager {
     });
   }
 
+  /**
+ * Function to search bookings based on filter
+ * Currently supports: date range
+ * 
+ * @param {string} filter 
+ * @param {string} from 
+ * @param {string} to 
+ * @returns array of bookings
+ */
+searchBookings(filter, from, to) {
+  return new Promise((resolve, reject) => {
+
+    if (filter === 'date') {
+
+      // 🔥 NORMALISE DATE FORMAT
+      const formatDate = (dateStr) => {
+        return new Date(dateStr).toISOString().split('T')[0];
+      };
+
+      const fromDate = formatDate(from);
+      const toDate = formatDate(to);
+
+      console.log("Searching between:", fromDate, "and", toDate);
+
+      const query = `
+        SELECT * FROM bookings 
+        WHERE date >= ? AND date <= ?
+      `;
+
+      bookingsdb.all(query, [fromDate, toDate], (err, rows) => {
+        if (err) {
+          console.error("Database error in searchBookings:", err);
+          reject(err);
+        } else {
+          console.log("Bookings retrieved:", rows.length);
+          resolve(rows);
+        }
+      });
+
+    } else {
+      console.warn("Unknown filter type:", filter);
+      resolve([]);
+    }
+  });
+}
 
 
 

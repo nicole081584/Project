@@ -26,7 +26,9 @@ const voucherRoutes = require('./routes/vouchers.js');
 const bookingSlotsRoutes = require('./routes/bookingSlots.js')
 const makeBookingRoutes = require('./routes/makeBooking.js')
 const userTypeRoutes = require ('./routes/userType.js')
+const bookingsRoutes = require('./routes/bookings.js');
 
+app.use(base + 'bookings', bookingsRoutes);
 app.use(base + 'vouchers', voucherRoutes);
 app.use(base + 'bookingSlots', bookingSlotsRoutes);
 app.use(base + 'makeBooking', makeBookingRoutes);
