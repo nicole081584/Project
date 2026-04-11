@@ -48,6 +48,24 @@ const TableStyles = StyleSheet.create({
     alignItems: 'flex-end',
   },
 
+  colDate: {
+  flex: 1.6,
+},
+
+colTime: {
+  flex: 1.2,
+   alignItems: 'center',
+},
+
+colGuests: {
+  flex: 1.5,
+  alignItems: 'center',
+},
+
+colName: {
+  flex: 2.2,
+},
+
   bold: {
     fontWeight: 'bold',
   },

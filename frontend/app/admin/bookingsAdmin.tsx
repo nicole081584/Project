@@ -1,6 +1,7 @@
+
 // app/(tabs)/menu/login/admin/bookingsAdmin.tsx 
 import { useRouter } from 'expo-router';
-import { Image, Pressable, TextInput, Platform, View } from 'react-native'; 
+import { Image, Pressable, TextInput, View } from 'react-native'; 
 import React, { useState } from 'react'; 
 import { SafeAreaView } from 'react-native-safe-area-context'; 
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -20,123 +21,91 @@ import { searchBookings } from '@/libraries/backendService';
 export default function BookingsAdminScreen() { 
   const router = useRouter();
 
-  // --- STAGES ---
   const [stage, setStage] = useState<'management' | 'results'>('management');
 
   const [results, setResults] = useState<any[]>([]);
   const [resultDates, setResultDates] = useState<{ from: string; to: string } | null>(null);
   const [isToday, setIsToday] = useState(false);
 
-  // --- DATE STATE ---
-  const [fromDate, setFromDate] = useState(new Date());
-  const [toDate, setToDate] = useState(new Date());
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
 
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
 
   const formatDate = (date: Date) => date.toLocaleDateString();
 
- const formatForAPI = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+  const formatForAPI = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const formatUKDate = (date: string) => {
     const [year, month, day] = date.split('-');
     return `${day}/${month}/${year}`;
   };
 
-  // --- RETRIEVAL ---
   const handleRetrieval = async (mode: 'today' | 'range') => {
 
-  let from: string;
-  let to: string;
+    let from: string;
+    let to: string;
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
+    const today = new Date();
+    today.setHours(0,0,0,0);
 
-  if (mode === 'today') {
-    from = formatForAPI(today);
-    to = formatForAPI(today);
-    setIsToday(true);
-  } else {
-    from = formatForAPI(fromDate);
-    to = formatForAPI(toDate);
-    setIsToday(false);
-  }
+    if (mode === 'today') {
+      from = formatForAPI(today);
+      to = formatForAPI(today);
+      setIsToday(true);
+    } else {
 
-  // ✅ FIX: DO NOT wrap in new Date()
-  const data = await searchBookings('date', from, to);
-  const mapped = data.map((b: any) => ({
-  ...b,
-  dateOfBooking: b.date
-}));
+      if (!fromDate || !toDate) {
+        alert('Please select both dates');
+        return;
+      }
 
-  const sorted = [...mapped].sort((a, b) => {
+      if (fromDate > toDate) {
+        alert('"From" date must be before "To" date');
+        return;
+      }
 
-  // 🟢 TODAY → time only
-  if (mode === 'today') {
-    return a.time.localeCompare(b.time);
-  }
+      from = formatForAPI(fromDate);
+      to = formatForAPI(toDate);
+      setIsToday(false);
+    }
 
-  // 🔵 RANGE → proper date comparison
-  const dateA = new Date(a.dateOfBooking);
-  const dateB = new Date(b.dateOfBooking);
+    const data = await searchBookings('date', from, to);
 
-  if (dateA.getTime() !== dateB.getTime()) {
-    return dateA.getTime() - dateB.getTime();
-  }
+    const mapped = data.map((b: any) => ({
+      ...b,
+      dateOfBooking: b.date
+    }));
 
-  // same date → sort by time
-  return a.time.localeCompare(b.time);
-});
+    const sorted = [...mapped].sort((a, b) => {
 
-  setResults(sorted);
-  setResultDates({ from, to });
-  setStage('results');
-};
+      if (mode === 'today') {
+        return a.time.localeCompare(b.time);
+      }
 
-  // --- PRINT ---
+      const dateA = new Date(a.dateOfBooking);
+      const dateB = new Date(b.dateOfBooking);
+
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+
+      return a.time.localeCompare(b.time);
+    });
+
+    setResults(sorted);
+    setResultDates({ from, to });
+    setStage('results');
+  };
+
   const handlePrint = async () => {
-
-    const html = `
-      <h1>Bookings</h1>
-      <p>
-        ${
-  resultDates?.from === resultDates?.to
-    ? formatUKDate(resultDates?.from ?? '')
-    : `${formatUKDate(resultDates?.from ?? '')} - ${formatUKDate(resultDates?.to ?? '')}`
-}
-      </p>
-
-      <table style="width:100%; border-collapse: collapse;">
-        <tr>
-          <th style="border:1px solid #000; padding:8px;">#</th>
-          ${!isToday ? `<th style="border:1px solid #000; padding:8px;">Date</th>` : ''}
-          <th style="border:1px solid #000; padding:8px;">Time</th>
-          <th style="border:1px solid #000; padding:8px;">Guests</th>
-          <th style="border:1px solid #000; padding:8px;">Name</th>
-          <th style="border:1px solid #000; padding:8px;">Phone</th>
-          <th style="border:1px solid #000; padding:8px;">Comment</th>
-        </tr>
-
-        ${results.map((b, i) => `
-          <tr>
-            <td style="border:1px solid #000; padding:6px;">${i+1}</td>
-            ${!isToday ? `<td style="border:1px solid #000; padding:6px;">${formatUKDate(b.date)}</td>` : ''}
-            <td style="border:1px solid #000; padding:6px;">${b.time}</td>
-            <td style="border:1px solid #000; padding:6px;">${b.numberOfGuests}</td>
-            <td style="border:1px solid #000; padding:6px;">${b.title} ${b.firstName} ${b.lastName}</td>
-            <td style="border:1px solid #000; padding:6px;">${b.phoneNumber}</td>
-            <td style="border:1px solid #000; padding:6px;">${b.comment || ''}</td>
-          </tr>
-        `).join('')}
-      </table>
-    `;
-
-    await Print.printAsync({ html });
+    await Print.printAsync({ html: '<h1>Bookings</h1>' });
   };
 
   return (
@@ -146,55 +115,127 @@ export default function BookingsAdminScreen() {
       {stage === 'management' && (
         <ParallaxScrollView>
 
-          <Image source={require('@/assets/images/admin.png')} style={ContainerStyles.titleImage} />
+          <Image
+            source={require('@/assets/images/admin.png')}
+            style={ContainerStyles.titleImage}
+            accessible
+            accessibilityLabel="Admin screen header image"
+          />
 
           <ThemedView style={ContainerStyles.titleContainer}>
-            <ThemedText type="title">Booking Management</ThemedText>
+            <ThemedText type="title" accessibilityRole="header">
+              Booking Management
+            </ThemedText>
           </ThemedView>
 
-          {/* TODAY */}
-          <Pressable style={ButtonAndInputStyles.button} onPress={() => handleRetrieval('today')}>
+          <Pressable
+            style={ButtonAndInputStyles.button}
+            onPress={() => handleRetrieval('today')}
+            accessibilityRole="button"
+            accessibilityLabel="View today's bookings"
+            accessibilityHint="Shows all bookings for today"
+          >
             <ThemedText>Today’s Bookings</ThemedText>
           </Pressable>
 
-          {/* DATE RANGE */}
-          <ThemedView style={{ marginTop: 25 }}>
-            <ThemedText type="subtitle">Search by Date Range</ThemedText>
+          <ThemedView>
+            <ThemedText type="subtitle" accessibilityRole="header">
+              Search Bookings by Date Range
+            </ThemedText>
 
             <ThemedView style={{ flexDirection: 'row', gap: 10 }}>
 
               {/* FROM */}
-              <ThemedView style={{ flex: 1 }}>
+              <View style={{ flex: 1 }}>
                 <ThemedText>From</ThemedText>
-                <TextInput value={formatDate(fromDate)} editable={false} style={ButtonAndInputStyles.input}/>
-                <Pressable onPress={() => setShowFromPicker(true)}>
-                  <Ionicons name="calendar-outline" size={22} />
-                </Pressable>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff' }}>
+                  <TextInput
+                    value={fromDate ? formatDate(fromDate) : ''}
+                    placeholder="Select date"
+                    editable={false}
+                    accessibilityLabel="From date"
+                    accessibilityHint="Select start date"
+                  />
+
+                  <Pressable
+                    onPress={() => setShowFromPicker(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open from date picker"
+                  >
+                    <Ionicons name="calendar-outline" size={22} />
+                  </Pressable>
+                </View>
+
                 {showFromPicker && (
-                  <DateTimePicker value={fromDate} mode="date"
-                    onChange={(e,d)=>{setShowFromPicker(false); if(d) setFromDate(d);}}
+                  <DateTimePicker
+                    value={fromDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowFromPicker(false);
+                      if (selectedDate) setFromDate(selectedDate);
+                    }}
                   />
                 )}
-              </ThemedView>
+              </View>
 
               {/* TO */}
-              <ThemedView style={{ flex: 1 }}>
+              <View style={{ flex: 1 }}>
                 <ThemedText>To</ThemedText>
-                <TextInput value={formatDate(toDate)} editable={false} style={ButtonAndInputStyles.input}/>
-                <Pressable onPress={() => setShowToPicker(true)}>
-                  <Ionicons name="calendar-outline" size={22} />
-                </Pressable>
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff' }}>
+                  <TextInput
+                    value={toDate ? formatDate(toDate) : ''}
+                    placeholder="Select date"
+                    editable={false}
+                    accessibilityLabel="To date"
+                    accessibilityHint="Select end date"
+                  />
+
+                  <Pressable
+                    onPress={() => setShowToPicker(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Open to date picker"
+                  >
+                    <Ionicons name="calendar-outline" size={22} />
+                  </Pressable>
+                </View>
+
                 {showToPicker && (
-                  <DateTimePicker value={toDate} mode="date"
-                    onChange={(e,d)=>{setShowToPicker(false); if(d) setToDate(d);}}
+                  <DateTimePicker
+                    value={toDate || new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={(event, selectedDate) => {
+                      setShowToPicker(false);
+                      if (selectedDate) setToDate(selectedDate);
+                    }}
                   />
                 )}
-              </ThemedView>
+              </View>
 
             </ThemedView>
 
-            <Pressable style={ButtonAndInputStyles.button} onPress={() => handleRetrieval('range')}>
+            <Pressable
+              style={ButtonAndInputStyles.button}
+              onPress={() => handleRetrieval('range')}
+              accessibilityRole="button"
+              accessibilityLabel="Search bookings by date range"
+              accessibilityHint="Displays bookings between selected dates"
+            >
               <ThemedText>Search Date Range</ThemedText>
+            </Pressable>
+          </ThemedView>
+
+          <ThemedView>
+            <Pressable
+              style={ButtonAndInputStyles.button}
+              onPress={() => router.push('/admin')}
+              accessibilityRole="button"
+              accessibilityLabel="Back to admin home"
+            >
+              <ThemedText>← Back Admin Home</ThemedText>
             </Pressable>
           </ThemedView>
 
@@ -206,45 +247,101 @@ export default function BookingsAdminScreen() {
       {stage === 'results' && (
         <ParallaxScrollView>
 
-          <Image source={require('@/assets/images/admin.png')} style={ContainerStyles.titleImage} />
+          <Image
+            source={require('@/assets/images/admin.png')}
+            style={ContainerStyles.titleImage}
+            accessible
+            accessibilityLabel="Bookings results header image"
+          />
 
-          <ThemedView style={ContainerStyles.titleContainer}>
-            <ThemedText type="title">Bookings</ThemedText>
-          </ThemedView>
+          <ThemedView>
 
-          <ThemedText type="subtitle">
-            {
-              resultDates?.from === resultDates?.to
-                ? formatUKDate(resultDates?.from ?? '')
-                : `${formatUKDate(resultDates?.from ?? '')} - ${formatUKDate(resultDates?.to ?? '')}`
-          }
-          </ThemedText>
+            <ThemedView style={ContainerStyles.titleContainer}>
+              <ThemedText type="title" accessibilityRole="header">
+                Bookings
+              </ThemedText>
+            </ThemedView>
 
-          {/* TABLE HEADER */}
-          <View style={TableStyles.headerRow}>
-            {!isToday && <View style={TableStyles.cell}><ThemedText>Date</ThemedText></View>}
-            <View style={TableStyles.cell}><ThemedText>Time</ThemedText></View>
-            <View style={TableStyles.cell}><ThemedText>Guests</ThemedText></View>
-          </View>
+            <ThemedText
+              accessibilityLabel={`Showing bookings from ${
+                resultDates?.from === resultDates?.to
+                  ? formatUKDate(resultDates?.from ?? '')
+                  : `${formatUKDate(resultDates?.from ?? '')} to ${formatUKDate(resultDates?.to ?? '')}`
+              }`}
+            >
+              {
+                resultDates?.from === resultDates?.to
+                  ? formatUKDate(resultDates?.from ?? '')
+                  : `${formatUKDate(resultDates?.from ?? '')} - ${formatUKDate(resultDates?.to ?? '')}`
+              }
+            </ThemedText>
 
-          {/* TABLE ROWS */}
-          {results.map((b, i) => (
-            <View key={b.id} style={TableStyles.row}>
-              {!isToday && <View style={TableStyles.cell}><ThemedText>{formatUKDate(b.date)}</ThemedText></View>}
-              <View style={TableStyles.cell}><ThemedText>{b.time}</ThemedText></View>
-              <View style={TableStyles.cell}><ThemedText>{b.numberOfGuests}</ThemedText></View>
+            {/* TABLE HEADER */}
+            <View style={TableStyles.headerRow} accessible accessibilityRole="header">
+              {!isToday && (
+                <View style={[TableStyles.cell, TableStyles.colDate]}>
+                  <ThemedText>Date</ThemedText>
+                </View>
+              )}
+              <View style={[TableStyles.cell, TableStyles.colTime]}>
+                <ThemedText>Time</ThemedText>
+              </View>
+              <View style={[TableStyles.cell, TableStyles.colGuests]}>
+                <ThemedText>Guests</ThemedText>
+              </View>
+              <View style={[TableStyles.cell, TableStyles.colName]}>
+                <ThemedText>Name</ThemedText>
+              </View>
             </View>
-          ))}
 
-          {/* PRINT */}
-          <Pressable style={ButtonAndInputStyles.button} onPress={handlePrint}>
-            <ThemedText>🖨 Print Report</ThemedText>
-          </Pressable>
+            {/* TABLE ROWS */}
+            {results.map((b, i) => (
+              <View
+                key={b.id}
+                style={TableStyles.row}
+                accessible
+                accessibilityRole="text"
+                accessibilityLabel={`Booking ${i + 1}: ${b.firstName} ${b.lastName}, ${b.numberOfGuests} guests at ${b.time}${!isToday ? ` on ${formatUKDate(b.date)}` : ''}`}
+              >
+                {!isToday && (
+                  <View style={[TableStyles.cell, TableStyles.colDate]}>
+                    <ThemedText>{formatUKDate(b.date)}</ThemedText>
+                  </View>
+                )}
 
-          {/* BACK */}
-          <Pressable style={ButtonAndInputStyles.button} onPress={() => setStage('management')}>
-            <ThemedText>← Back</ThemedText>
-          </Pressable>
+                <View style={[TableStyles.cell, TableStyles.colTime]}>
+                  <ThemedText>{b.time}</ThemedText>
+                </View>
+
+                <View style={[TableStyles.cell, TableStyles.colGuests]}>
+                  <ThemedText>{b.numberOfGuests}</ThemedText>
+                </View>
+
+                <View style={[TableStyles.cell, TableStyles.colName]}>
+                  <ThemedText>{b.firstName} {b.lastName}</ThemedText>
+                </View>
+              </View>
+            ))}
+
+            <Pressable
+              style={ButtonAndInputStyles.button}
+              onPress={handlePrint}
+              accessibilityRole="button"
+              accessibilityLabel="Print bookings report"
+            >
+              <ThemedText>🖨 Print Report</ThemedText>
+            </Pressable>
+
+            <Pressable
+              style={ButtonAndInputStyles.button}
+              onPress={() => setStage('management')}
+              accessibilityRole="button"
+              accessibilityLabel="Go back to booking search"
+            >
+              <ThemedText>← Back</ThemedText>
+            </Pressable>
+
+          </ThemedView>
 
           <Footer />
         </ParallaxScrollView>
