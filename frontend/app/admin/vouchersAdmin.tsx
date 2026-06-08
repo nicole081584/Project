@@ -127,6 +127,8 @@ export default function VouchersAdminScreen() {
   await Print.printAsync({ html });
 };
 
+
+
   const handleValidation = () => {
   // 1. Dates must exist
   if (!fromDate || !toDate) {

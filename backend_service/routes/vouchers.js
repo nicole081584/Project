@@ -85,7 +85,7 @@ router.post('/redeem', jsonParser, async (request, response) => {
 });
 
 /**
- * The implementation of the POST /voucher route. This will add a new voucher
+ * The implementation of the POST /vouchers route. This will add a new voucher
  * to the database.
  *
  * @param title       title of the customer
@@ -100,6 +100,22 @@ router.post('/redeem', jsonParser, async (request, response) => {
 
     //log Post voucher and values
     console.log("Request to POST voucher: " + title + ", " + firstName + ", " + lastName + ", " + phoneNumber + ", " + email + ", " + value);
+    //console.log("POST VOUCHER FUNCTION HAS BEEN REACHED");
+    //console.log("EMAIL PARAMETER IS:", email);
+
+    // Temporary simulated backend failure for testing
+    //const submittedEmail = String(email || '').trim().toLowerCase();
+
+    //if (submittedEmail === 'fail@test.com') {
+       // console.log("Simulated backend failure triggered");
+
+        //return {
+          // status: "error",
+           // message: "Simulated backend failure for testing."
+        //};
+    //}
+
+
     // generate a 18 digit random voucher number with nanoid  
     const voucherNumber = nanoid(18);
     //get purchase date
@@ -109,10 +125,14 @@ router.post('/redeem', jsonParser, async (request, response) => {
     voucher.voucherNumber = voucherNumber;
     voucher.date = purchaseDate;
 
+      
+
     //add voucher to DB
     try {
     const success = await voucherManager.addVoucher(voucher, 'vouchers');
     let result;
+
+    
 
     if (success) {
           //if sucessful mail voucher
@@ -232,6 +252,7 @@ async function redeemVoucher(reference, amount) {
                 message: "Voucher not found"
             });
         }
+
 
         const result = await voucherManager.redeemVoucher(reference, amount);
 
