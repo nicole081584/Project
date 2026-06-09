@@ -64,6 +64,17 @@ router.post("/", jsonParser, async function (request, response) {
     booking.bookingNumber = bookingNumber;
     booking.dateBookingWasMade = bookingDate;
 
+    //Simulated backedn failure for testing error handling
+    // Test hook for frontend failure testing
+      //if (email === "fail@test.com") {
+      //console.log("Simulated booking failure triggered for testing.");
+
+        //return JSON.stringify({
+        //status: "error",
+        //message: "Simulated booking failure for testing purposes"
+    //});
+//}
+
     //add voucher to DB
     try {
     const success = await bookingManager.addBooking(booking, 'bookings');

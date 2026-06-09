@@ -1,4 +1,4 @@
-// components/BookingCalendar.tsx
+// libraries/BookingCalendar.tsx
 import React, { useState, useMemo } from 'react';
 import { Calendar } from 'react-native-calendars';
 import closedData from '@/assets/data/closedDays.json';

@@ -32,6 +32,17 @@ async function getBookingSlots(date, numberOfGuests) {
     console.log("Request to GET available booking slots: Date: "+date+", Number of Guests: "+numberOfGuests);
 
     let response = "";
+
+      //backedn failure sumilation
+      //if (date === "24/07/2026" && Number(numberOfGuests) === 8) {
+  //console.log("Simulated booking slot retrieval failure triggered.");
+
+  //return JSON.stringify({
+    //status: "error",
+    //message: "Simulated failure: booking slots could not be retrieved."
+  //});
+//}
+
     try {
       const result = await bookingManager.findBookingSlots(date, numberOfGuests);
 
