@@ -38,8 +38,8 @@ async function getBookingSlots(date, numberOfGuests) {
   //console.log("Simulated booking slot retrieval failure triggered.");
 
   //return JSON.stringify({
-    //status: "error",
-    //message: "Simulated failure: booking slots could not be retrieved."
+  //  status: "error",
+  //  message: "Simulated failure: booking slots could not be retrieved."
   //});
 //}
 

@@ -1,4 +1,4 @@
- /** 
+/** 
  * This is the code to connect to the taxi service API provided seprately.
  * 
  * The following routes are supported:
@@ -21,7 +21,21 @@ const apibase = "http://192.168.4.39:3001/"; //Home
 //const apibase = "http://192.168.1.23:3001/"; // Oma
 //change to server address once installed on a separat server
 
+/**
+ * A helper function to format dates for the booking backend.
+ * Converts a date string from "YYYY-MM-DD" to "DD/MM/YYYY" format if it contains dashes.
+ * 
+ * @param dateValue the date string to format
+ * @returns the formatted date string
+ */
+function formatDateForBookingBackend(dateValue: string): string {
+  if (dateValue.includes('-')) {
+    const [year, month, day] = dateValue.split('-');
+    return `${day}/${month}/${year}`;
+  }
 
+  return dateValue;
+}
 
 /**
  * A helper function to parse gift Vouchers from a JSON object.
@@ -108,6 +122,7 @@ export async function checkUserType(emailUsername: string, bookingNumberPassword
   }
 }
 
+
 /**
  * Searches bookings using flexible filters (e.g. date range)
  * 
@@ -130,7 +145,6 @@ export async function searchBookings(
 
   const url = `${apibase}bookings/search`;
 
-  // ✅ BUILD BODY (no ISO conversion!)
   const body: any = {
     filter
   };
@@ -160,6 +174,7 @@ export async function searchBookings(
     return [];
   }
 }
+
 /**
  * Retrieves voucher(s) based on provided filters
  * 
@@ -264,7 +279,6 @@ export async function purchaseVoucher(
 
     console.log('Voucher purchase response:', data);
 
-    // Map response to giftVoucher object
     if (!data || !data[0]) {
       throw new Error('Invalid response format: voucher data not found');
     }
@@ -335,9 +349,7 @@ export async function redeemVoucher(
       }),
     });
 
-  
-   const text = await response.text();
-    // try to parse it as JSON, if it fails log the error and show an alert, then return null
+    const text = await response.text();
     let json;
     try {
       json = JSON.parse(text);
@@ -346,7 +358,7 @@ export async function redeemVoucher(
       alert("Server did not return valid JSON");
       return null;
     }
-   const data = checkResponse(json);
+    const data = checkResponse(json);
 
     console.log("Redeem result:", data);
 

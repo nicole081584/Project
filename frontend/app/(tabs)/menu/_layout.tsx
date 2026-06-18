@@ -18,8 +18,7 @@ export default function MenuDrawerLayout() {
       <Drawer.Screen name="bookings" options={{ title: 'Bookings', headerShown: false, }} />
       <Drawer.Screen name="vouchers" options={{ title: 'Gift Vouchers', headerShown: false, }} />
       <Drawer.Screen name="login/index" options={{ title: 'Login', headerShown: false, }} />
-      <Drawer.Screen name="login/admin" options={{ drawerItemStyle: { display: 'none' }, headerShown: false,}} />
-      <Drawer.Screen name="login/bookingamendment" options={{ drawerItemStyle: { display: 'none' }, headerShown: false,}} />
+      
       
 
     </Drawer>
