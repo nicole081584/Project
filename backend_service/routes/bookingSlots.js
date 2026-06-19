@@ -34,12 +34,12 @@ async function getBookingSlots(date, numberOfGuests) {
     let response = "";
 
       //backedn failure sumilation
-      //if (date === "24/07/2026" && Number(numberOfGuests) === 8) {
+     // if (date === "25/07/2026" && Number(numberOfGuests) === 8) {
   //console.log("Simulated booking slot retrieval failure triggered.");
 
   //return JSON.stringify({
-  //  status: "error",
-  //  message: "Simulated failure: booking slots could not be retrieved."
+   // status: "error",
+   // message: "Simulated failure: booking slots could not be retrieved."
   //});
 //}
 

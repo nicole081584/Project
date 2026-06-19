@@ -70,9 +70,9 @@ router.post("/", jsonParser, async function (request, response) {
       //console.log("Simulated booking failure triggered for testing.");
 
         //return JSON.stringify({
-      //  status: "error",
-    //    message: "Simulated booking failure for testing purposes"
-  //  });
+        //status: "error",
+        //message: "Simulated booking failure for testing purposes"
+    //});
 //}
 
     //add voucher to DB
